@@ -110,11 +110,10 @@ Then generate the review document:
 python autoresearch/review.py --save
 ```
 
-This creates `autoresearch/review.md` containing:
-- **Summary** — goal, baseline → final score, iterations kept/reverted
-- **Changes Made** — each kept change with its score impact and rationale
-- **Diff** — unified diff of all changes
-- **Before / After** — full text of both versions (collapsible)
+This creates `autoresearch/review.html` and opens it in your browser. It shows:
+- **Score banner** — baseline → final with goal
+- **Changes Made** — each kept change with its score impact
+- **Side-by-side diff** — GitHub-style split view with red/green highlighting
 
 Also print the results summary and final eval:
 
