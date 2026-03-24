@@ -288,33 +288,17 @@ def run_wizard(args) -> None:
 
     # Step 1: Skill file
     print("\n─── STEP 1: Point to your skill file ───\n")
+    print("  Enter the path to the skill / instruction file you want to improve.")
+    print("  Path should be relative to the repo root.")
     if args.skill:
         target = args.skill
-        print(f"  Skill file: {target}")
+        print(f"\n  Skill file: {target}")
     else:
-        # Try to auto-detect
-        candidates = []
-        for pattern in ["**/*.instructions.md", "**/*CLAUDE.md", "**/*AGENTS.md",
-                        "**/*copilot-instructions.md", "**/*.md"]:
-            for p in REPO_ROOT.glob(pattern):
-                rel = str(p.relative_to(REPO_ROOT)).replace("\\", "/")
-                if "autoresearch" not in rel and "node_modules" not in rel:
-                    candidates.append(rel)
-        candidates = sorted(set(candidates))[:10]
+        target = prompt("\n  Path to skill file")
 
-        if candidates:
-            print("  Found these instruction/skill files:")
-            for i, c in enumerate(candidates, 1):
-                print(f"    {i}) {c}")
-            print(f"    {len(candidates) + 1}) Enter a different path")
-            choice = input(f"\n  Which file? [1-{len(candidates) + 1}]: ").strip()
-            if choice.isdigit() and 1 <= int(choice) <= len(candidates):
-                target = candidates[int(choice) - 1]
-            else:
-                target = prompt("Path to skill file (relative to repo root)")
-        else:
-            target = prompt("Path to skill file (relative to repo root)")
-
+    if not target:
+        print("\n  ❌ No file specified.")
+        sys.exit(1)
     if not os.path.exists(os.path.join(REPO_ROOT, target)):
         print(f"\n  ❌ File not found: {target}")
         sys.exit(1)
@@ -322,12 +306,19 @@ def run_wizard(args) -> None:
 
     # Step 2: Goal
     print("\n─── STEP 2: Define your goal ───\n")
-    print("  What do you want to improve? Describe in plain language.")
-    print("  Examples:")
-    print("    • Make it more accurate against the actual codebase")
-    print("    • Add missing sections about error handling and edge cases")
-    print("    • Improve code examples to match real patterns")
-    print("    • Make it clearer for non-technical users")
+    print("  What do you want to improve? A good goal is:")
+    print("    ✓ Specific   — targets a concrete gap (not just \"make it better\")")
+    print("    ✓ Verifiable — you can tell when it's achieved")
+    print("    ✓ Scoped     — focuses on one dimension of quality at a time")
+    print()
+    print("  Strong goals sound like:")
+    print("    • \"Ensure every public function is documented with its parameters\"")
+    print("    • \"Add error-handling guidance for each API call\"")
+    print("    • \"Cover all three estimator types with code examples\"")
+    print()
+    print("  Weak goals sound like:")
+    print("    • \"Make it better\" (too vague — better how?)")
+    print("    • \"Fix everything\" (too broad — pick one dimension)")
     if args.goal:
         goal = args.goal
         print(f"\n  Goal: {goal}")
@@ -389,6 +380,14 @@ def run_wizard(args) -> None:
     # Write config
     write_config(target, sources, goal, all_checks)
     print(f"  📝 Config written to: autoresearch/config.py")
+
+    # Save baseline snapshot for before/after review
+    baseline_path = Path(__file__).resolve().parent / ".baseline"
+    with open(os.path.join(REPO_ROOT, target), encoding="utf-8") as f:
+        baseline_content = f.read()
+    with open(baseline_path, "w", encoding="utf-8") as f:
+        f.write(baseline_content)
+    print(f"  📸 Baseline snapshot saved to: autoresearch/.baseline")
 
     # Step 5: Baseline
     print("\n─── BASELINE SCORE ───\n")

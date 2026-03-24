@@ -1,3 +1,5 @@
 __pycache__/
 autoresearch/config.py
 autoresearch/results.tsv
+autoresearch/.baseline
+autoresearch/review.md

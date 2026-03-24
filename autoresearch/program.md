@@ -104,17 +104,22 @@ Stop the loop when ANY of these are true:
 - You've completed **20 iterations** (or the limit set by the user)
 - Last **3 consecutive iterations** were all reverted
 
-Then print the results summary:
+Then generate the review document:
+
+```bash
+python autoresearch/review.py --save
+```
+
+This creates `autoresearch/review.md` containing:
+- **Summary** — goal, baseline → final score, iterations kept/reverted
+- **Changes Made** — each kept change with its score impact and rationale
+- **Diff** — unified diff of all changes
+- **Before / After** — full text of both versions (collapsible)
+
+Also print the results summary and final eval:
 
 ```bash
 python autoresearch/eval.py --results
-```
-
-This shows a table of all iterations: scores, deltas, kept vs reverted.
-
-Also run a final eval to show the detailed breakdown:
-
-```bash
 python autoresearch/eval.py
 ```
 
