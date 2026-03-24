@@ -299,6 +299,16 @@ The codebase is split across three modules. Map each analysis step to the correc
 | E  | `callout` | `estimation` | Renders highlighted callout boxes in PDF |
 | E  | `footer` | `estimation` | PDF footer with page number and timestamp |
 
+### Key Constants
+
+- **`DEFAULTS`** (main.py) — Session state initialization dict: step counter, raw/processed data, treatment, outcome, confounders, estimator, results, processing log, variable definitions, causal question.
+- **`ESTIMATORS`** (estimation.py) — Catalog of three estimators (OLS, LinearDML, LinearDRLearner) with metadata: name, description, when_to_use, complexity, treatment_type.
+- **`ACCENT`** `(0, 102, 179)`, **`CARD_BG`** `(246, 248, 250)`, **`DARK`** `(44, 44, 44)` — RGB color constants for PDF styling.
+
+### Dependencies
+
+The app relies on: `pandas`, `numpy`, `econml`, `matplotlib`, `fpdf`, `openai`, `scipy`, plus the internal modules `data_utils` and `estimation`.
+
 ---
 
 ## General Rules
