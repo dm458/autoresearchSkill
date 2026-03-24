@@ -1,109 +1,159 @@
 # autoresearchSkill
 
-A **generic framework** for iteratively improving any skill / instruction file using
-[Karpathy's autoresearch pattern](https://github.com/karpathy/autoresearch): an
-automated loop where an AI agent edits a target file, scores the result, and keeps
-improvements via git commits.
+**Autonomously improve any skill / instruction file.**
 
-Ships with a **causal analysis skill** as a working example — swap in your own
-skill file and scoring config to optimize anything.
+Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) pattern
+and inspired by [uditgoenka/autoresearch](https://github.com/uditgoenka/autoresearch).
+Set a goal → the agent runs the loop → you review the results.
 
-## How It Works
+## The 3-Step Flow
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌───────────┐
-│ program.md  │────▶│ Agent edits │────▶│  eval.py  │
-│ (loop rules)│     │ target file │     │ (scores)  │
-└─────────────┘     └──────┬──────┘     └─────┬─────┘
-                           │                   │
-                    ┌──────▼──────┐     ┌──────▼──────┐
-                    │ Improved?   │ YES │ git commit  │
-                    │ score > old │────▶│ new baseline│
-                    └──────┬──────┘     └─────────────┘
-                       NO  │
-                    ┌──────▼──────┐
-                    │ git revert  │
-                    │ try again   │
-                    └─────────────┘
+ YOU                          AGENT                         YOU
+  │                             │                             │
+  │  1. Point to skill file     │                             │
+  │  2. Define your goal        │                             │
+  │         │                   │                             │
+  │         └──────────────────▶│                             │
+  │                             │  Setup: scan source code,   │
+  │                             │  generate scoring config,   │
+  │                             │  establish baseline          │
+  │                             │                             │
+  │                             │  Loop (autonomous):         │
+  │                             │   ┌─ score                  │
+  │                             │   ├─ hypothesize            │
+  │                             │   ├─ edit skill file        │
+  │                             │   ├─ re-score               │
+  │                             │   ├─ keep or revert         │
+  │                             │   └─ repeat                 │
+  │                             │                             │
+  │                             └────────────────────────────▶│
+  │                                                           │
+  │                              3. Review results            │
+  │                                 (scores, git log,         │
+  │                                  results.tsv)             │
 ```
-
-| File | Role | Agent can edit? |
-|------|------|-----------------|
-| `autoresearch/config.py` | **Your scoring criteria** — define what to check | ❌ No (you edit before running) |
-| `autoresearch/eval.py` | **Scoring engine** — reads config, scores target | ❌ No |
-| `autoresearch/program.md` | **Agent instructions** — drives the loop | ❌ No |
-| Your target file | **The file being improved** | ✅ Yes |
 
 ## Quick Start
 
-### 1. Clone and set your target
+### 1. Point to your skill file
 
 ```bash
-git clone https://github.com/dm458/autoresearchSkill.git
-cd autoresearchSkill
+python autoresearch/setup.py
 ```
 
-### 2. Edit `autoresearch/config.py`
+The wizard asks for:
+- **Skill file** — auto-detects `.instructions.md`, `CLAUDE.md`, etc.
+- **Goal** — what to improve, in plain language
+- **Source files** — your code (auto-detected, used for accuracy checks)
 
-Set your target file and scoring checks:
+It generates a scoring config, runs a baseline eval, and you're ready.
 
-```python
-# The file the agent will improve
-TARGET_FILE = "path/to/your/skill.md"
+### 2. Launch the autonomous loop
 
-# Source code files for accuracy reference (optional)
-SOURCE_FILES = ["src/main.py", "src/utils.py"]
-
-# Scoring checks — see config.py for all check types
-CHECKS = [
-    {"id": "s1", "cat": "structure", "name": "Has clear title",  "pts": 2, "type": "regex",   "pattern": r"^#\s+.+"},
-    {"id": "w1", "cat": "workflow",  "name": "Covers auth flow",  "pts": 3, "type": "has_all", "terms": ["login", "token", "refresh"]},
-    {"id": "a1", "cat": "accuracy",  "name": "Uses correct API",  "pts": 2, "type": "has_any", "terms": ["fetchUser(", "getUser("]},
-    # ... add your checks
-]
-```
-
-### 3. Verify the eval works
-
-```bash
-python autoresearch/eval.py
-```
-
-### 4. Launch the autoresearch loop
-
-Open the repo in a coding agent (Claude Code, Copilot CLI, Cursor, etc.) and say:
+Open the repo in a coding agent and say:
 
 ```
 Read autoresearch/program.md and follow the instructions.
-Start by running: python autoresearch/eval.py
 ```
 
-The agent loops: **score → hypothesize → edit → re-score → commit or revert → repeat**.
+The agent loops: **score → hypothesize → edit → verify → commit/revert → repeat**.
+Each improvement gets a git commit. Each failure auto-reverts. Everything is logged.
 
-Review the experiment log with `git log --oneline`.
+### 3. Review results
 
-## Check Types Reference
+```bash
+python autoresearch/eval.py --results
+```
 
-| Type | What it does | Key params |
-|------|-------------|------------|
-| `has_all` | All terms must appear (case-insensitive) | `terms` |
-| `has_any` | Any term must appear | `terms` |
+```
+  AUTORESEARCH RESULTS
+  ════════════════════
+
+    #  Score      Δ  Status    Description
+  ───  ───────  ──────  ────────  ──────────────────
+    0  22/35    +0.0  📊 baseline  initial state
+    1  25/35    +3.0  ✅ keep     added error handling section
+    2  25/35    +0.0  ↩️ revert   tried restructuring (no gain)
+    3  28/35    +3.0  ✅ keep     added code examples for auth flow
+    4  31/35    +3.0  ✅ keep     mentioned all key functions
+
+  Baseline:  22/35 (62.9%)
+  Current:   31/35 (88.6%)
+  Kept:      3 improvements
+  Reverted:  1 experiments
+```
+
+Or review the git log: `git log --oneline`
+
+## How Setup Works
+
+`setup.py` auto-generates scoring checks in three categories:
+
+| Category | How it's generated | What it checks |
+|----------|--------------------|---------------|
+| **Structure** | Universal (always included) | Title, sections, code blocks, formatting, length |
+| **Coverage** | Scans your source files | Mentions key functions, classes, constants, libraries |
+| **Goal** | Parses your improvement goal | Checks for terms related to your stated goal |
+
+The generated config is saved to `autoresearch/config.py`. You can edit it
+to add, remove, or adjust checks before running the loop.
+
+## CLI Reference
+
+```bash
+# Interactive setup wizard
+python autoresearch/setup.py
+
+# Setup with flags (skip prompts)
+python autoresearch/setup.py --skill path/to/skill.md --goal "improve accuracy"
+
+# Run eval (score the skill file)
+python autoresearch/eval.py
+
+# Score + log to results.tsv
+python autoresearch/eval.py --log "description of change"
+
+# View results summary
+python autoresearch/eval.py --results
+
+# JSON output (for scripting)
+python autoresearch/eval.py --json
+```
+
+## File Structure
+
+```
+autoresearch/
+├── setup.py       ← Interactive setup wizard (generates config)
+├── eval.py        ← Scoring engine (reads config, scores target)
+├── config.py      ← Generated scoring config (or manually edited)
+├── program.md     ← Agent loop instructions (read by coding agent)
+└── results.tsv    ← Iteration log (created by eval --log)
+```
+
+## Check Types
+
+| Type | What it checks | Key params |
+|------|---------------|------------|
+| `has_all` | ALL terms present (case-insensitive) | `terms` |
+| `has_any` | ANY term present | `terms` |
 | `count_of` | Score ∝ matched/total terms | `terms` |
-| `regex` | Regex pattern must match (multiline) | `pattern` |
+| `regex` | Regex pattern matches | `pattern` |
 | `word_range` | Word count in [min, max] | `min`, `max` |
-| `headers` | ≥N headings at given level | `min`, `level` (default 2) |
-| `code_blocks` | ≥N ``` code blocks | `min` |
-| `ordered` | Terms appear in sequential order | `terms` |
-| `tiered` | First matching tier wins (top-down) | `tiers: [{score, condition, terms}]` |
-
-## Included Example: Causal Analysis Skill
-
-The repo ships with a working config for a causal analysis skill file
-(`.github/instructions/causal.instructions.md`) that scores **117/127 (92.1%)**
-with 10 points of improvement potential. Run it as-is to see the pattern in action.
+| `headers` | ≥N headings at given level | `min`, `level` |
+| `code_blocks` | ≥N code blocks | `min` |
+| `ordered` | Terms in sequential order | `terms` |
+| `tiered` | First matching tier wins (top-down) | `tiers` |
 
 ## Requirements
 
 - Python 3.10+
-- No pip dependencies (eval uses only stdlib)
+- No pip dependencies (stdlib only)
 - A coding agent to run the loop (Claude Code, Copilot CLI, Cursor, etc.)
+
+## Included Example
+
+The repo includes a causal analysis skill file (`.github/instructions/causal.instructions.md`)
+and source code (`app/*.py`) as a working example. Run `python autoresearch/setup.py` and
+point it at the causal instructions to see it in action.
