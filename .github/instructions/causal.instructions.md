@@ -282,6 +282,25 @@ If the user asks to change any assumptions:
 
 ---
 
+## Implementation Reference — Key Functions
+
+The codebase is split across three modules. Map each analysis step to the correct function:
+
+| Step | Function | Module | Purpose |
+|------|----------|--------|---------|
+| A1 | `get_column_summary` | `data_utils` | Summarize columns (type, nulls, unique, range, mean) |
+| B1 | `generate_causal_graph_confounders` | `data_utils` | LLM-powered pairwise causal reasoning to identify confounders |
+| B2 | `apply_processing` | `data_utils` | Missing values, winsorization, log transforms, dummy encoding |
+| B4 | `fit_model` | `estimation` | Fit OLS, LinearDML, or LinearDRLearner and return results dict |
+| B5 | `compute_unconditional_difference` | `estimation` | Raw association (mean diff for binary, OLS slope for continuous) |
+| B5 | `get_effect_summary` | `estimation` | Plain-language summary: ATE, CI, p-value, significance % |
+| E  | `generate_results_pdf` | `estimation` | Two-page consulting-style PDF with charts and diagnostics |
+| E  | `create_effect_plot` | `estimation` | Matplotlib bar chart comparing unadjusted vs causal estimate |
+| E  | `callout` | `estimation` | Renders highlighted callout boxes in PDF |
+| E  | `footer` | `estimation` | PDF footer with page number and timestamp |
+
+---
+
 ## General Rules
 
 These rules apply across all parts:
